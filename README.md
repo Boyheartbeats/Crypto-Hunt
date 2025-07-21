@@ -1,6 +1,6 @@
 # Operation Crypto Harvest: Tracking a Financially Motivated Intrusion Through MDE Forensics
 
-**Date Completed:** July 12, 2025  
+**Date Started:** July 12, 2025  
 
 **Objective:** This threat hunt tracks an attacker targeting crypto-related financial data, leveraging LOLBins, PowerShell downgrade techniques, and anti-forensic measures. The investigation was performed entirely within **Microsoft Defender for Endpoint (MDE)** using advanced hunting queries.
 
